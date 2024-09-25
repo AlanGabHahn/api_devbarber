@@ -37,6 +37,22 @@ class AuthController extends Controller
                 'email' => $email,
                 'password' => password_hash($password, PASSWORD_DEFAULT)
             ]);
+
+            $token = auth()->attempt([
+                'email' => $email,
+                'password' => $password
+            ]);
+
+
+            if (!$token) {
+                $array['error'] = 'Ocorreu um erro!';
+                return $array;
+            }
+
+            $info = auth()->user();
+            $info['avatar'] = url('media/avatars/'. $info['avatar']);
+            $array['data'] = $info;
+            $array['token'] = $token;
         } else {
             $array['error'] = 'Dados incorretos';
             return $array;
