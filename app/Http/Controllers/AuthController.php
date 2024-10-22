@@ -85,4 +85,24 @@ class AuthController extends Controller
 
         return $array;
     }
+
+    public function logout()
+    {
+        auth()->logout();
+        return ['success' => 'Deslogado com sucesso'];
+    }
+
+    public function refresh()
+    {
+        $array = ['error' => ''];
+
+        $token = auth()->refresh();
+        
+        $info = auth()->user();
+        $info['avatar'] = url('media/avatars/'. $info['avatar']);
+        $array['data'] = $info;
+        $array['token'] = $token;
+
+        return $array;
+    }
 }
