@@ -95,4 +95,20 @@ class BarberController extends Controller
         }
         return $array;
     }
+
+    public function list(Request $request)
+    {
+        $array = ['error' => ''];
+
+        $barbers = Barber::all();
+
+        foreach ($barbers as $bkey => $bvalue) {
+            $barbers[$bkey]['avatar'] = url('media/avatars/'.$barbers[$bvalue]['avatar']);
+        }
+
+        $array['data'] = $barbers;
+        $array['loc'] = 'Caxias do Sul';
+
+        return $array;
+    }
 }
