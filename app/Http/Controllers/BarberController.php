@@ -100,15 +100,59 @@ class BarberController extends Controller
     {
         $array = ['error' => ''];
 
-        $barbers = Barber::all();
+        $lat = $request->input['lat'];
+        $lng = $request->input['long'];
+        $city = $request->input['city'];
+
+        if (!empty($city)) {
+            $result = $this->searchGeo($city);
+
+            if (count($result['results']) > 0) {
+                $lat = $result['results'][0]['geometry']['location']['lat'];
+                $lng = $result['results'][0]['geometry']['location']['lng'];
+            }
+        } elseif (!empty($lat) && !empty($lng)) {
+            $result = $lat . ',' . $lng;
+
+            if (count($result['results']) > 0) {
+                $city = $result['results'][0]['formatted_address'];
+            }
+        } else {
+            $lat = '-23.5630907';
+            $lng = '-46.6682795';
+            $city = 'São Paulo';
+        }
+
+        $barbers = Barber::select(Barber::raw('*, SQRT(
+            POW(69.1 * (latitude - '. $lat. '), 2) +
+            POW(69.1 * ('. $lng.' - longitude), * COS(latitude / 57.3), 2)) AS distance'))
+            ->havingRaw('distance < ?', [10])
+            ->orderBy('distance', 'asc')
+            ->get();
 
         foreach ($barbers as $bkey => $bvalue) {
             $barbers[$bkey]['avatar'] = url('media/avatars/'.$barbers[$bvalue]['avatar']);
         }
 
         $array['data'] = $barbers;
-        $array['loc'] = 'Caxias do Sul';
+        $array['loc'] = 'São Paulo';
 
         return $array;
+    }
+
+    private function searchGeo($address)
+    {
+        $key = env('MAPS_KEY', null);
+
+        $address = urlencode($address);
+
+        $url = 'https://maps.googleapis.com/maps/api/geocode/json?address='.$address.'&key='.$key;
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        $result = curl_exec($ch);
+        curl_close($ch);
+
+        return json_decode($result, true);
     }
 }
