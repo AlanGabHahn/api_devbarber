@@ -7,9 +7,9 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\{
     User,
     Barber,
-    BarberPhotos,
-    BarberServices,
-    BarberTestimonials,
+    BarberPhoto,
+    BarberService,
+    BarberTestimonial,
     BarberAvailability
 };
 
@@ -52,15 +52,15 @@ class BarberController extends Controller
 
             $ns = rand(3, 6);
             for($w=0;$w<4;$w++) {
-                $newBarberPhoto = new BarberPhotos();
-                $newBarberPhoto->id_barber = $newBarber->id;
+                $newBarberPhoto = new BarberPhoto();
+                $newBarberPhoto->barber_id = $newBarber->id;
                 $newBarberPhoto->url = rand(1, 5).'.png';
                 $newBarberPhoto->save();
             }
 
             for($w=0;$w<$ns;$w++) {
-                $newBarberService = new BarberServices();
-                $newBarberService->id_barber = $newBarber->id;
+                $newBarberService = new BarberService();
+                $newBarberService->barber_id = $newBarber->id;
                 $newBarberService->name = $servicos[rand(0, count($servicos)-1)].' de '.$servicos2[rand(0, count($servicos2)-1)];
                 $newBarberService->price = rand(1, 99).'.'.rand(0, 100);
                 $newBarberService->save();
@@ -68,7 +68,7 @@ class BarberController extends Controller
 
             for($w=0;$w<3;$w++) {
                 $newBarberTestimonial = new BarberTestimonial();
-                $newBarberTestimonial->id_barber = $newBarber->id;
+                $newBarberTestimonial->barber_id = $newBarber->id;
                 $newBarberTestimonial->name = $names[rand(0, count($names)-1)].' '.$lastnames[rand(0, count($lastnames)-1)];
                 $newBarberTestimonial->rate = rand(2, 4).'.'.rand(0, 9);
                 $newBarberTestimonial->body = $depos[rand(0, count($depos)-1)];
@@ -86,7 +86,7 @@ class BarberController extends Controller
                     $hours[] = $time.':00';
                 }
                 $newBarberAvail = new BarberAvailability();
-                $newBarberAvail->id_barber = $newBarber->id;
+                $newBarberAvail->barber_id = $newBarber->id;
                 $newBarberAvail->weekday = $e;
                 $newBarberAvail->hours = implode(',', $hours);
                 $newBarberAvail->save();
@@ -100,9 +100,14 @@ class BarberController extends Controller
     {
         $array = ['error' => ''];
 
-        $lat = $request->input['lat'];
-        $lng = $request->input['long'];
-        $city = $request->input['city'];
+        $lat = $request->input('lat');
+        $lng = $request->input('long');
+        $city = $request->input('city');
+
+        $offset = $request->input('offset');
+        if (!$offset) {
+            $offset = 0;
+        }
 
         if (!empty($city)) {
             $result = $this->searchGeo($city);
@@ -124,11 +129,14 @@ class BarberController extends Controller
         }
 
         $barbers = Barber::select(Barber::raw('*, SQRT(
-            POW(69.1 * (latitude - '. $lat. '), 2) +
-            POW(69.1 * ('. $lng.' - longitude), * COS(latitude / 57.3), 2)) AS distance'))
-            ->havingRaw('distance < ?', [10])
-            ->orderBy('distance', 'asc')
-            ->get();
+                                                POW(69.1 * (latitude - '. $lat. '), 2) +
+                                                POW(69.1 * ('. $lng.' - longitude) * COS(latitude / 57.3), 2)) AS distance'
+                                            ))
+                                ->havingRaw('distance < ?', [10])
+                                ->orderBy('distance', 'asc')
+                                ->offset($offset)
+                                ->limit(5)
+                                ->get();
 
         foreach ($barbers as $bkey => $bvalue) {
             $barbers[$bkey]['avatar'] = url('media/avatars/'.$barbers[$bvalue]['avatar']);
