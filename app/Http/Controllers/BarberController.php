@@ -148,6 +148,48 @@ class BarberController extends Controller
         return $array;
     }
 
+    public function one($id)
+    {
+        $array = ['error' => ''];
+
+        $barber = Barber::find($id);
+
+        if ($barber) {
+            $barber['avatar'] = url('media/avatars/'. $barber['avatar']);
+            $barber['favorited'] = false;
+            $barber['photos'] = [];
+            $barber['services'] = [];
+            $barber['testimonials'] = [];
+            $barber['available'] = [];
+
+            $barber['photos'] = BarberPhoto::select(['id', 'url'])
+                                            ->where('barber_id', $barber->id)
+                                            ->get();
+            foreach ($barber['photos'] as $bpkey => $bpvalue) {
+                $barber['photos'][$bpkey]['url'] = url('media/uploads/'. $barber['photos'][$bpvalue]['url']);
+            }
+
+            $barber['services'] = BarberService::select(['id', 'name', 'price'])
+                                                ->where('barber_id', $barber->id)
+                                                ->get();
+
+            $barber['testimonials'] = BarberTestimonial::select(['id', 'name', 'rate', 'body'])
+                                                        ->where('barber_id', $barber->id)
+                                                        ->get();
+
+            $barber['available'] = BarberAvailability::select(['id', 'weekday', 'hours'])
+                                                        ->where('barber_id', $barber->id)
+                                                        ->get();
+
+            $array['data'] = $barber;
+        } else  {
+            $array['error'] = 'Barbeiro não encontrado';
+            return $array;
+        }
+
+        return $array;
+    }
+
     private function searchGeo($address)
     {
         $key = env('MAPS_KEY', null);
