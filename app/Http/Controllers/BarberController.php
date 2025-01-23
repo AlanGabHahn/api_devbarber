@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\{
     User,
+    UserAppointment,
     Barber,
     BarberPhoto,
     BarberService,
@@ -176,10 +177,31 @@ class BarberController extends Controller
             $barber['testimonials'] = BarberTestimonial::select(['id', 'name', 'rate', 'body'])
                                                         ->where('barber_id', $barber->id)
                                                         ->get();
+            
+            $availability = [];
 
-            $barber['available'] = BarberAvailability::select(['id', 'weekday', 'hours'])
+            $avails = BarberAvailability::select(['id', 'weekday', 'hours'])
                                                         ->where('barber_id', $barber->id)
                                                         ->get();
+            $avails_weekdays = [];
+            foreach ($avails as $item) {
+                $avails_weekdays[$item['weekday']] = explode(',', $item['hours']);
+            }
+
+            $appointments = [];
+
+            $user_appointments = UserAppointment::where('barber_id', $barber->id) 
+                                                ->whereBetween('ap_datetime', [
+                                                    date('Y-m-d'). ' 00:00:00', 
+                                                    date('Y-m-d', strtotime('+20 days')).' 23:59:59'
+                                                ])
+                                                ->get();
+            foreach ($user_appointments as $item) {
+                $appointments[] = $item['ap_datetime'];
+            }
+
+
+            $barber['available'] = $availability;
 
             $array['data'] = $barber;
         } else  {
